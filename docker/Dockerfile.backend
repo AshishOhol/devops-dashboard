@@ -1,0 +1,30 @@
+# DevOps Dashboard Backend Docker Container
+# This Dockerfile containerizes the Node.js API server
+# Uses Alpine Linux for minimal image size and security
+
+# Use Node.js 18 on Alpine Linux as base image
+# Alpine provides a minimal, secure Linux distribution (~5MB base)
+FROM node:18-alpine
+
+# Set working directory for the application
+WORKDIR /app
+
+# Copy package files first for better Docker layer caching
+# If dependencies haven't changed, this layer will be reused
+COPY backend/package*.json ./
+
+# Install only production dependencies
+# --production flag excludes devDependencies to reduce image size
+RUN npm install --production
+
+# Copy all backend source code
+# This includes server.js and any other application files
+COPY backend/ ./
+
+# Expose port 3001 for the API server
+# This is the port the Express server listens on
+EXPOSE 3001
+
+# Start the application using npm start
+# This runs the command defined in package.json scripts.start
+CMD ["npm", "start"]

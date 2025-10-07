@@ -1,0 +1,42 @@
+# DevOps Dashboard Frontend Docker Container
+# This Dockerfile creates a production-ready container for the React frontend
+# Uses multi-stage build to optimize image size and security
+
+# STAGE 1: BUILD STAGE
+# Use Node.js 18 Alpine Linux as base image for building the React app
+# Alpine is chosen for smaller image size (~5MB vs ~900MB for full Node image)
+FROM node:18-alpine AS build
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy package files first to leverage Docker layer caching
+# If package.json hasn't changed, npm install layer will be cached
+COPY frontend/package*.json ./
+
+# Install all dependencies (including devDependencies needed for build)
+RUN npm install
+
+# Copy all frontend source code
+COPY frontend/ ./
+
+# Build the React application for production
+# This creates optimized, minified static files in /app/build
+RUN npm run build
+
+# STAGE 2: PRODUCTION STAGE
+# Use lightweight Nginx Alpine image to serve static files
+# This stage only contains the built files, not the source code or build tools
+FROM nginx:alpine
+
+# Copy built React files from the build stage to Nginx web root
+# --from=build references the previous stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Expose port 80 for HTTP traffic
+# This is the standard web port that Nginx serves on
+EXPOSE 80
+
+# Start Nginx in foreground mode
+# 'daemon off' is required for Docker containers to keep running
+CMD ["nginx", "-g", "daemon off;"]

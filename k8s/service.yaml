@@ -1,0 +1,30 @@
+# Kubernetes Services
+# Exposes applications and enables service discovery within cluster
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-frontend-service
+  namespace: devops-dashboard
+spec:
+  selector:
+    app: dashboard-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-backend-service
+  namespace: devops-dashboard
+spec:
+  selector:
+    app: dashboard-backend
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+  type: ClusterIP

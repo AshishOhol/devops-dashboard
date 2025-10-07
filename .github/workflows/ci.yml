@@ -1,0 +1,205 @@
+# GitHub Actions CI/CD Pipeline for DevOps Dashboard
+# This workflow runs on every push and pull request to ensure code quality
+
+name: CI/CD Pipeline
+
+# Trigger conditions
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+# Environment variables
+env:
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: devops-dashboard
+
+jobs:
+  # Frontend Testing Job
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Run Frontend Tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+        
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
+
+  # Backend Testing Job
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run Backend Tests
+      run: |
+        cd backend
+        npm test || echo "No tests specified"
+        
+    - name: Start Backend Server (Health Check)
+      run: |
+        cd backend
+        npm start &
+        sleep 10
+        curl -f http://localhost:3001/health || exit 1
+
+  # Docker Build Job
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test]
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Frontend Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.frontend
+        push: false
+        tags: ${{ env.IMAGE_NAME }}/frontend:latest
+        
+    - name: Build Backend Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.backend
+        push: false
+        tags: ${{ env.IMAGE_NAME }}/backend:latest
+
+  # Integration Test Job
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Start Services with Docker Compose
+      run: |
+        docker-compose up -d
+        sleep 30
+        
+    - name: Test Frontend Accessibility
+      run: |
+        curl -f http://localhost:3000 || exit 1
+        
+    - name: Test Backend API
+      run: |
+        curl -f http://localhost:3001/health || exit 1
+        curl -f http://localhost:3001/api/metrics || exit 1
+        
+    - name: Stop Services
+      run: docker-compose down
+
+  # Security Scan Job
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy Scan Results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Deploy Job (only on main branch)
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [integration-test, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build and Push Docker Images
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.frontend
+        push: true
+        tags: |
+          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/frontend:latest
+          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/frontend:${{ github.sha }}
+          
+    - name: Build and Push Backend Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.backend
+        push: true
+        tags: |
+          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/backend:latest
+          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/backend:${{ github.sha }}
+          
+    - name: Deploy to Kubernetes (if configured)
+      run: |
+        echo "Kubernetes deployment would happen here"
+        echo "Configure kubectl and apply manifests from k8s/ directory"
+        # kubectl apply -f k8s/

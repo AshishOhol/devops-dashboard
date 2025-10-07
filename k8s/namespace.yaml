@@ -1,0 +1,21 @@
+# Kubernetes Namespace Configuration
+# 
+# This file creates an isolated namespace for the DevOps Dashboard application.
+# Namespaces provide resource isolation and help organize applications in a cluster.
+# 
+# Benefits:
+# - Resource isolation from other applications
+# - Separate RBAC (Role-Based Access Control) policies
+# - Resource quotas and limits can be applied per namespace
+# - Easier management and organization of related resources
+
+# Kubernetes API version for core resources like Namespace
+apiVersion: v1
+
+# Resource type - Namespace creates an isolated environment
+kind: Namespace
+
+# Metadata section contains resource identification information
+metadata:
+  # Name of the namespace - all dashboard resources will be deployed here
+  name: devops-dashboard

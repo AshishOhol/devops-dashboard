@@ -1,0 +1,90 @@
+# Docker Compose Configuration for DevOps Dashboard
+# 
+# This file orchestrates all services needed for the complete DevOps monitoring stack.
+# It includes the main dashboard application plus monitoring and logging infrastructure.
+# 
+# Services included:
+# - Backend API (Node.js)
+# - Frontend Dashboard (React)
+# - Prometheus (Metrics collection)
+# - Grafana (Advanced dashboards)
+# - Elasticsearch (Log storage)
+# - Kibana (Log visualization)
+# 
+# Usage:
+# - docker-compose up -d    (start all services)
+# - docker-compose down     (stop all services)
+# - docker-compose logs -f  (view logs)
+
+# Docker Compose file format version
+version: '3.8'
+
+# Service definitions
+services:
+  
+  # BACKEND API SERVICE
+  # Node.js server providing REST API endpoints
+  backend:
+    # Build configuration
+    build:
+      # Build context (root directory)
+      context: .
+      # Dockerfile location for backend
+      dockerfile: docker/Dockerfile.backend
+    
+    # Port mapping: host:container
+    ports:
+      - "3001:3001"  # API server accessible on localhost:3001
+    
+    # Environment variables
+    environment:
+      # Set Node.js environment to development for detailed logging
+      - NODE_ENV=development
+
+  # FRONTEND DASHBOARD SERVICE
+  # React application served by Nginx
+  frontend:
+    # Build configuration
+    build:
+      # Build context (root directory)
+      context: .
+      # Dockerfile location for frontend
+      dockerfile: docker/Dockerfile.frontend
+    
+    # Port mapping: host:container
+    ports:
+      - "3000:80"    # Dashboard accessible on localhost:3000
+    
+    # Service dependencies
+    depends_on:
+      # Frontend needs backend to be running for API calls
+      - backend
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch

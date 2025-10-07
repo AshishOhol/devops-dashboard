@@ -1,0 +1,85 @@
+/*
+ * Jenkins CI/CD Pipeline
+ * Automates build, test, and deployment process for dashboard application
+ */
+
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'your-registry.com'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build Frontend') {
+            steps {
+                script {
+                    docker.build("${DOCKER_REGISTRY}/dashboard-frontend:${IMAGE_TAG}", "-f docker/Dockerfile.frontend .")
+                }
+            }
+        }
+        
+        stage('Build Backend') {
+            steps {
+                script {
+                    docker.build("${DOCKER_REGISTRY}/dashboard-backend:${IMAGE_TAG}", "-f docker/Dockerfile.backend .")
+                }
+            }
+        }
+        
+        stage('Test') {
+            parallel {
+                stage('Frontend Tests') {
+                    steps {
+                        sh 'cd frontend && npm test -- --coverage --watchAll=false'
+                    }
+                }
+                stage('Backend Tests') {
+                    steps {
+                        sh 'cd backend && npm test'
+                    }
+                }
+            }
+        }
+        
+        stage('Push Images') {
+            steps {
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}") {
+                        docker.image("${DOCKER_REGISTRY}/dashboard-frontend:${IMAGE_TAG}").push()
+                        docker.image("${DOCKER_REGISTRY}/dashboard-backend:${IMAGE_TAG}").push()
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to K8s') {
+            steps {
+                sh """
+                    sed -i 's|latest|${IMAGE_TAG}|g' k8s/deployment.yaml
+                    kubectl apply -f k8s/
+                """
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        failure {
+            emailext (
+                subject: "Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "Build failed. Check console output at ${env.BUILD_URL}",
+                to: "${env.CHANGE_AUTHOR_EMAIL}"
+            )
+        }
+    }
+}

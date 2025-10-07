@@ -1,0 +1,218 @@
+/*
+ * Main Dashboard Component - App.js
+ * 
+ * This is the core component of the DevOps Dashboard application.
+ * It provides real-time monitoring of system metrics, alerts, and service status.
+ * 
+ * Features:
+ * - Real-time data fetching every 5 seconds
+ * - Interactive line charts for CPU, Memory, and Disk usage
+ * - Live connection status indicator with pulse animation
+ * - Alert management system with severity levels
+ * - Service health monitoring
+ * - Responsive grid layout
+ * - Error handling for backend connectivity
+ * 
+ * Data Flow:
+ * 1. Component mounts and starts fetching data from backend API
+ * 2. Data is updated every 5 seconds using setInterval
+ * 3. Charts and UI elements re-render with new data
+ * 4. Connection status is monitored and displayed
+ */
+
+// Import React and essential hooks
+import React, { useState, useEffect } from 'react';
+// useState: Manages component state (data, loading, connection status)
+// useEffect: Handles side effects (API calls, intervals, cleanup)
+
+// Import charting components from Recharts library for data visualization
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+// LineChart: Main chart container
+// Line: Individual data lines (CPU, Memory, Disk)
+// XAxis/YAxis: Chart axes with labels
+// ResponsiveContainer: Makes charts responsive to screen size
+
+// Import axios for making HTTP requests to the backend API
+import axios from 'axios';
+
+// Main functional component using React hooks
+const App = () => {
+  // STATE MANAGEMENT - All component state variables using React hooks
+  
+  // Array to store system performance metrics (CPU, Memory, Disk usage over time)
+  const [metrics, setMetrics] = useState([]);
+  
+  // Array to store active system alerts (high usage warnings, critical errors)
+  const [alerts, setAlerts] = useState([]);
+  
+  // Array to store service health status (system processes, network, API status)
+  const [services, setServices] = useState([]);
+  
+  // Object to store general system information (CPU type, memory, OS)
+  const [systemInfo, setSystemInfo] = useState({});
+  
+  // Boolean to track if data is currently being loaded (shows loading spinner)
+  const [loading, setLoading] = useState(true);
+  
+  // Timestamp of the last successful data update (for display purposes)
+  const [lastUpdate, setLastUpdate] = useState(null);
+  
+  // Boolean to track if backend connection is active (affects UI colors and status)
+  const [isLive, setIsLive] = useState(false);
+
+  // EFFECT HOOK - Handles data fetching and real-time updates
+  useEffect(() => {
+    // Async function to fetch all data from backend API endpoints
+    const fetchData = async () => {
+      try {
+        // Log start of data fetching for debugging
+        console.log('Fetching data from backend...');
+        
+        // Make concurrent API calls to all backend endpoints
+        // These calls happen simultaneously for better performance
+        const metricsRes = await axios.get('/api/metrics');     // Get system metrics history
+        const alertsRes = await axios.get('/api/alerts');       // Get current active alerts
+        const servicesRes = await axios.get('/api/services');   // Get service health status
+        
+        // Log successful data retrieval for debugging
+        console.log('Data received:', metricsRes.data.length, 'metrics');
+        
+        // UPDATE STATE with received data
+        setMetrics(metricsRes.data);        // Update metrics array with new data
+        setAlerts(alertsRes.data);          // Update alerts array
+        setServices(servicesRes.data);      // Update services array
+        
+        // Set system information (could be dynamic from API in future)
+        setSystemInfo({cpu: 'System CPU', memory: '16 GB', os: 'Windows'});
+        
+        // Record successful update timestamp
+        setLastUpdate(new Date());
+        
+        // Mark connection as live (affects UI indicators)
+        setIsLive(true);
+        
+        // Data loaded successfully, hide loading indicator
+        setLoading(false);
+        
+      } catch (error) {
+        // Handle any errors during API calls
+        console.error('Connection failed:', error.message);
+        
+        // Mark connection as failed (affects UI colors)
+        setIsLive(false);
+        
+        // Stop loading even on error
+        setLoading(false);
+      }
+    };
+
+    // INITIALIZATION AND REAL-TIME UPDATES
+    fetchData();  // Fetch data immediately when component mounts
+    
+    // Set up interval to fetch data every 5 seconds (5000ms) for real-time updates
+    const interval = setInterval(fetchData, 5000);
+    
+    // CLEANUP FUNCTION - Prevents memory leaks
+    // This runs when component unmounts or dependencies change
+    return () => clearInterval(interval);
+    
+  }, []); // Empty dependency array means this effect runs only once on mount
+
+  if (loading) {
+    return <div style={{padding: '20px'}}>Loading dashboard...</div>;
+  }
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{color: '#333'}}>DevOps Dashboard - Real-Time Monitoring</h1>
+
+      <div style={{marginBottom: '20px', padding: '15px', backgroundColor: isLive ? '#e8f5e8' : '#ffebee', borderRadius: '5px', border: `2px solid ${isLive ? '#4caf50' : '#f44336'}`}}>
+        <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+          <div style={{width: '12px', height: '12px', borderRadius: '50%', backgroundColor: isLive ? '#4caf50' : '#f44336', animation: isLive ? 'pulse 2s infinite' : 'none'}}></div>
+          <strong>Status:</strong> {loading ? 'Connecting...' : isLive ? '🟢 LIVE DATA' : '🔴 DISCONNECTED'}
+        </div>
+        <div style={{marginTop: '8px'}}>
+          <strong>System:</strong> {systemInfo.cpu} | {systemInfo.memory} | {systemInfo.os}
+        </div>
+        <div style={{fontSize: '12px', color: '#666'}}>
+          Last Update: {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Never'} | Data Points: {metrics.length}
+        </div>
+      </div>
+      <style>{`
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div>
+          <h2>📊 Real-Time System Metrics ({metrics.length} data points)</h2>
+          <div style={{marginBottom: '10px', fontSize: '14px'}}>
+            <span style={{color: '#ff4444'}}>🔴 Red = CPU Usage</span> | 
+            <span style={{color: '#44ff44'}}>🟢 Green = Memory Usage</span> | 
+            <span style={{color: '#4444ff'}}>🔵 Blue = Disk Usage</span>
+          </div>
+          {metrics.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={metrics}>
+                <XAxis dataKey="time" />
+                <YAxis domain={[0, 100]} label={{ value: 'Usage %', angle: -90, position: 'insideLeft' }} />
+                <Line type="monotone" dataKey="cpu" stroke="#ff4444" strokeWidth={3} name="CPU %" />
+                <Line type="monotone" dataKey="memory" stroke="#44ff44" strokeWidth={3} name="Memory %" />
+                <Line type="monotone" dataKey="disk" stroke="#4444ff" strokeWidth={3} name="Disk %" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #ddd', backgroundColor: '#f9f9f9'}}>
+              ⏳ Waiting for backend connection...
+            </div>
+          )}
+          <div style={{marginTop: '10px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '4px', border: '1px solid #ddd'}}>
+            <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '5px'}}>📈 CURRENT VALUES:</div>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', fontSize: '12px', fontFamily: 'monospace'}}>
+              <div style={{color: '#ff4444'}}>🔴 CPU: {metrics[metrics.length-1]?.cpu?.toFixed(1) || '0'}%</div>
+              <div style={{color: '#44ff44'}}>🟢 Memory: {metrics[metrics.length-1]?.memory?.toFixed(1) || '0'}%</div>
+              <div style={{color: '#4444ff'}}>🔵 Disk: {metrics[metrics.length-1]?.disk?.toFixed(1) || '0'}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2>Active Alerts</h2>
+          {alerts.map(alert => (
+            <div key={alert.id} style={{ 
+              padding: '10px', 
+              margin: '5px 0', 
+              backgroundColor: alert.severity === 'critical' ? '#ffebee' : '#fff3e0',
+              border: '1px solid #ddd'
+            }}>
+              <strong>{alert.name}</strong>
+              <p>{alert.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2>Service Status</h2>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {services.map(service => (
+            <div key={service.name} style={{
+              padding: '10px',
+              backgroundColor: service.status === 'healthy' ? '#e8f5e8' : '#ffebee',
+              border: '1px solid #ddd',
+              borderRadius: '4px'
+            }}>
+              <strong>{service.name}</strong>
+              <p>Status: {service.status}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;

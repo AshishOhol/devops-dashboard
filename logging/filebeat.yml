@@ -1,0 +1,25 @@
+# Filebeat Configuration
+# Collects and ships log files to Logstash for processing
+
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/*.log
+    - /var/log/containers/*.log
+  fields:
+    service: dashboard
+  fields_under_root: true
+
+- type: docker
+  containers.ids:
+    - "*"
+  processors:
+    - add_docker_metadata: ~
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
