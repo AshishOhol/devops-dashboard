@@ -194,8 +194,8 @@ jobs:
         file: ./docker/Dockerfile.frontend
         push: true
         tags: |
-          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/frontend:latest
-          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/frontend:${{ github.sha }}
+          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/frontend:latest
+          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/frontend:${{ github.sha }}
           
     - name: Build and Push Backend Image
       uses: docker/build-push-action@v5
@@ -204,8 +204,8 @@ jobs:
         file: ./docker/Dockerfile.backend
         push: true
         tags: |
-          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/backend:latest
-          ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/backend:${{ github.sha }}
+          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/backend:latest
+          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/backend:${{ github.sha }}
           
     - name: Deploy to Kubernetes (if configured)
       run: |
