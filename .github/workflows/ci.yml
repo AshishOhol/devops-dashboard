@@ -187,25 +187,21 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Build and Push Docker Images
+    - name: Build Frontend Docker Image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./docker/Dockerfile.frontend
-        push: true
-        tags: |
-          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/frontend:latest
-          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/frontend:${{ github.sha }}
+        push: false
+        tags: devops-dashboard/frontend:latest
           
-    - name: Build and Push Backend Image
+    - name: Build Backend Docker Image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./docker/Dockerfile.backend
-        push: true
-        tags: |
-          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/backend:latest
-          ${{ env.DOCKER_REGISTRY }}/ashishohol/devops-dashboard/backend:${{ github.sha }}
+        push: false
+        tags: devops-dashboard/backend:latest
           
     - name: Deploy to Kubernetes (if configured)
       run: |
