@@ -128,7 +128,7 @@ jobs:
       
     - name: Start Services with Docker Compose
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
         
     - name: Test Frontend Accessibility
@@ -141,7 +141,7 @@ jobs:
         curl -f http://localhost:3001/api/metrics || exit 1
         
     - name: Stop Services
-      run: docker-compose down
+      run: docker compose down
 
   # Security Scan Job
   security-scan:
