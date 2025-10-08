@@ -10,6 +10,12 @@ on:
   pull_request:
     branches: [ main ]
 
+# Permissions for security scanning
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 # Environment variables
 env:
   NODE_VERSION: '18'
@@ -141,6 +147,9 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout Code
@@ -155,7 +164,7 @@ jobs:
         output: 'trivy-results.sarif'
         
     - name: Upload Trivy Scan Results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
