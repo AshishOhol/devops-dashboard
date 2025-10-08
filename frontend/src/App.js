@@ -83,7 +83,14 @@ const App = () => {
         setServices(servicesRes.data);      // Update services array
         
         // Set system information (could be dynamic from API in future)
-        setSystemInfo({cpu: 'System CPU', memory: '16 GB', os: 'Windows'});
+        // Get real system info from backend API
+        try {
+          const systemRes = await axios.get('/api/system-info');
+          setSystemInfo(systemRes.data);
+        } catch (sysError) {
+          console.warn('Could not fetch system info, using defaults');
+          setSystemInfo({cpu: 'System CPU', memory: 'Unknown', os: 'Unknown'});
+        }
         
         // Record successful update timestamp
         setLastUpdate(new Date());
@@ -124,7 +131,7 @@ const App = () => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{color: '#333'}}>DevOps Dashboard - Real-Time Monitoring</h1>
+      <h1 style={{color: '#333'}}>DevOps Dashboard - Real-Time System Monitoring</h1>
 
       <div style={{marginBottom: '20px', padding: '15px', backgroundColor: isLive ? '#e8f5e8' : '#ffebee', borderRadius: '5px', border: `2px solid ${isLive ? '#4caf50' : '#f44336'}`}}>
         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
@@ -148,7 +155,7 @@ const App = () => {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div>
-          <h2>📊 Real-Time System Metrics ({metrics.length} data points)</h2>
+          <h2>📊 Live System Metrics ({metrics.length} data points)</h2>
           <div style={{marginBottom: '10px', fontSize: '14px'}}>
             <span style={{color: '#ff4444'}}>🔴 Red = CPU Usage</span> | 
             <span style={{color: '#44ff44'}}>🟢 Green = Memory Usage</span> | 
@@ -170,7 +177,7 @@ const App = () => {
             </div>
           )}
           <div style={{marginTop: '10px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '4px', border: '1px solid #ddd'}}>
-            <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '5px'}}>📈 CURRENT VALUES:</div>
+            <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '5px'}}>📈 LIVE SYSTEM VALUES:</div>
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', fontSize: '12px', fontFamily: 'monospace'}}>
               <div style={{color: '#ff4444'}}>🔴 CPU: {metrics[metrics.length-1]?.cpu?.toFixed(1) || '0'}%</div>
               <div style={{color: '#44ff44'}}>🟢 Memory: {metrics[metrics.length-1]?.memory?.toFixed(1) || '0'}%</div>
