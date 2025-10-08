@@ -106,9 +106,9 @@ const collectMetrics = async () => {
     // Add new metric to history array
     metricsHistory.push(metric);
     
-    // Maintain rolling history - keep only last 20 data points
+    // Maintain rolling history - keep only last 60 data points (1 minute of data)
     // This prevents memory usage from growing indefinitely
-    if (metricsHistory.length > 20) {
+    if (metricsHistory.length > 60) {
       metricsHistory.shift(); // Remove oldest metric
     }
 
@@ -132,7 +132,7 @@ const collectMetrics = async () => {
     };
     
     metricsHistory.push(fallbackMetric);
-    if (metricsHistory.length > 20) metricsHistory.shift();
+    if (metricsHistory.length > 60) metricsHistory.shift();
     checkAlerts(fallbackMetric);
     
     console.log('Using fallback metrics due to error');
@@ -160,14 +160,14 @@ const initializeData = async () => {
       diskUsage = mainDrive.use || 0;
     }
 
-    // Create 5 initial data points with slight variations for chart display
-    for (let i = 0; i < 5; i++) {
+    // Create 10 initial data points with slight variations for chart display
+    for (let i = 0; i < 10; i++) {
       const metric = {
-        time: new Date(Date.now() - (4-i) * 5000).toLocaleTimeString(),
+        time: new Date(Date.now() - (9-i) * 1000).toLocaleTimeString(),
         cpu: Math.round((cpuUsage + (Math.random() - 0.5) * 5) * 100) / 100,      // Real CPU ± 2.5%
         memory: Math.round((memoryUsage + (Math.random() - 0.5) * 3) * 100) / 100, // Real Memory ± 1.5%
         disk: Math.round((diskUsage + (Math.random() - 0.5) * 2) * 100) / 100,     // Real Disk ± 1%
-        timestamp: Date.now() - (4-i) * 5000
+        timestamp: Date.now() - (9-i) * 1000
       };
       metricsHistory.push(metric);
     }
@@ -178,13 +178,13 @@ const initializeData = async () => {
     console.error('Error getting initial real metrics, using fallback:', error);
     
     // Fallback to simulated data if real metrics fail during initialization
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const metric = {
-        time: new Date(Date.now() - (4-i) * 5000).toLocaleTimeString(),
+        time: new Date(Date.now() - (9-i) * 1000).toLocaleTimeString(),
         cpu: Math.random() * 30 + 10,
         memory: Math.random() * 40 + 20,
         disk: Math.random() * 25 + 15,
-        timestamp: Date.now() - (4-i) * 5000
+        timestamp: Date.now() - (9-i) * 1000
       };
       metricsHistory.push(metric);
     }
@@ -256,9 +256,9 @@ const checkServices = async () => {
   }
 };
 
-// Collect data every 5 seconds
-cron.schedule('*/5 * * * * *', collectMetrics);
-cron.schedule('*/10 * * * * *', checkServices);
+// Collect data every 1 second (like Task Manager)
+cron.schedule('* * * * * *', collectMetrics);
+cron.schedule('*/5 * * * * *', checkServices);
 
 // Initialize data immediately with real metrics
 (async () => {
