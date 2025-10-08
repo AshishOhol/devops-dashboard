@@ -1,46 +1,20 @@
 {
-  "_comment_name": "Package name for npm registry",
   "name": "devops-dashboard-frontend",
-  
-  "_comment_version": "Semantic version number (major.minor.patch)",
   "version": "1.0.0",
-  
-  "_comment_proxy": "Development proxy - routes API calls to backend server during development",
   "proxy": "http://localhost:3001",
-  
-  "_comment_dependencies": "Production dependencies required for the application to run",
   "dependencies": {
-    "_comment_react": "Core React library for building user interfaces",
     "react": "^18.2.0",
-    
-    "_comment_react-dom": "React DOM library for rendering React components in browser",
     "react-dom": "^18.2.0",
-    
-    "_comment_react-scripts": "Create React App build tools and configuration",
     "react-scripts": "5.0.1",
-    
-    "_comment_axios": "HTTP client library for making API requests to backend",
     "axios": "^1.4.0",
-    
-    "_comment_recharts": "Charting library for creating interactive data visualizations",
     "recharts": "^2.7.2"
   },
-  
-  "_comment_scripts": "NPM scripts for development and build tasks",
   "scripts": {
-    "_comment_start": "Starts development server with hot reload on port 3000",
     "start": "react-scripts start",
-    
-    "_comment_build": "Creates optimized production build in 'build' folder",
     "build": "react-scripts build"
   },
-  
-  "_comment_browserslist": "Browser compatibility targets for CSS and JS transpilation",
   "browserslist": {
-    "_comment_production": "Production browsers: >0.2% usage, still supported",
     "production": [">0.2%", "not dead"],
-    
-    "_comment_development": "Development: Latest Chrome only for faster builds",
     "development": ["last 1 chrome version"]
   }
 }
