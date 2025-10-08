@@ -29,6 +29,7 @@ const express = require('express');        // Web framework for creating REST AP
 const cors = require('cors');              // Cross-Origin Resource Sharing middleware
 const si = require('systeminformation');   // Library for getting real system information
 const cron = require('node-cron');         // Task scheduler for periodic data collection
+const { generateReport, getReports, getLatestReport } = require('./reportGenerator');
 
 // SERVER CONFIGURATION
 // Create Express application instance
@@ -253,6 +254,12 @@ const checkServices = async () => {
 setInterval(collectMetrics, 500);
 setInterval(checkServices, 5000);
 
+// Generate reports every 10 minutes
+setInterval(() => {
+  const report = generateReport(metricsHistory, currentAlerts);
+  console.log(`📊 Generated report: ${report.summary.join(', ')}`);
+}, 10 * 60 * 1000); // 10 minutes
+
 // Initialize data immediately with real metrics
 (async () => {
   await initializeData();
@@ -293,6 +300,25 @@ app.get('/api/system-info', async (req, res) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Report API endpoints
+app.get('/api/reports', (req, res) => {
+  res.json(getReports());
+});
+
+app.get('/api/reports/latest', (req, res) => {
+  const latest = getLatestReport();
+  if (latest) {
+    res.json(latest);
+  } else {
+    res.status(404).json({ error: 'No reports available yet' });
+  }
+});
+
+app.post('/api/reports/generate', (req, res) => {
+  const report = generateReport(metricsHistory, currentAlerts);
+  res.json(report);
 });
 
 app.listen(PORT, () => {

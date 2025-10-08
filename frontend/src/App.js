@@ -59,6 +59,18 @@ const App = () => {
   
   // Boolean to track if backend connection is active (affects UI colors and status)
   const [isLive, setIsLive] = useState(false);
+  const [latestReport, setLatestReport] = useState(null);
+
+  // Generate report function
+  const generateReport = async () => {
+    try {
+      const reportRes = await axios.post('/api/reports/generate');
+      setLatestReport(reportRes.data);
+      alert('Report generated successfully!');
+    } catch (error) {
+      alert('Failed to generate report');
+    }
+  };
 
   // EFFECT HOOK - Handles data fetching and real-time updates
   useEffect(() => {
@@ -199,6 +211,22 @@ const App = () => {
               <p>{alert.description}</p>
             </div>
           ))}
+          
+          <div style={{marginTop: '20px'}}>
+            <button 
+              onClick={() => generateReport()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#2196f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              📊 Generate Report Now
+            </button>
+          </div>
         </div>
       </div>
 
@@ -218,6 +246,26 @@ const App = () => {
           ))}
         </div>
       </div>
+
+      {latestReport && (
+        <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #ddd'}}>
+          <h2>📋 Latest Report ({latestReport.reportTime})</h2>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '10px'}}>
+            <div>
+              <strong>CPU:</strong> Avg {latestReport.metrics.cpu.avg}% (Max: {latestReport.metrics.cpu.max}%)
+            </div>
+            <div>
+              <strong>Memory:</strong> Avg {latestReport.metrics.memory.avg}% (Max: {latestReport.metrics.memory.max}%)
+            </div>
+            <div>
+              <strong>Disk:</strong> Avg {latestReport.metrics.disk.avg}% (Max: {latestReport.metrics.disk.max}%)
+            </div>
+          </div>
+          <div style={{fontSize: '14px'}}>
+            <strong>Summary:</strong> {latestReport.summary.join(' | ')}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
