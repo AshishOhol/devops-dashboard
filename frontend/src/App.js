@@ -117,7 +117,7 @@ const App = () => {
     fetchData();  // Fetch data immediately when component mounts
     
     // Set up interval to fetch data every 5 seconds (5000ms) for real-time updates
-    const interval = setInterval(fetchData, 1000);
+    const interval = setInterval(fetchData, 500);
     
     // CLEANUP FUNCTION - Prevents memory leaks
     // This runs when component unmounts or dependencies change
@@ -155,7 +155,7 @@ const App = () => {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div>
-          <h2>📊 Live System Metrics ({metrics.length} data points - 1s updates)</h2>
+          <h2>📊 Live System Metrics ({metrics.length} data points - 0.5s updates)</h2>
           <div style={{marginBottom: '10px', fontSize: '14px'}}>
             <span style={{color: '#ff4444'}}>🔴 Red = CPU Usage</span> | 
             <span style={{color: '#44ff44'}}>🟢 Green = Memory Usage</span> | 
