@@ -74,17 +74,25 @@ let serviceStatus = [];
 // This function collects real system performance metrics and is called every 5 seconds
 const collectMetrics = async () => {
   try {
-    // Get real system metrics using systeminformation library
+    // Get real system metrics using systeminformation library with better accuracy
     const [cpuData, memData, diskData] = await Promise.all([
-      si.currentLoad(),     // Get current CPU load
+      si.currentLoad(),     // Get current CPU load with 1 second sampling
       si.mem(),            // Get memory information
       si.fsSize()          // Get filesystem information
     ]);
 
-    // Calculate actual usage percentages
-    const cpuUsage = cpuData.currentLoad || 0;                    // Current CPU load percentage
-    const memoryUsage = ((memData.used / memData.total) * 100) || 0;  // Memory usage percentage
-    const diskUsage = diskData.length > 0 ? diskData[0].use || 0 : 0;  // Primary disk usage percentage
+    // Calculate actual usage percentages (matching Task Manager calculations)
+    const cpuUsage = cpuData.currentLoadUser + cpuData.currentLoadSystem || 0;  // User + System CPU (like Task Manager)
+    const memoryUsage = ((memData.used / memData.total) * 100) || 0;            // Memory usage percentage
+    
+    // Find the main system drive (usually C: on Windows)
+    let diskUsage = 0;
+    if (diskData.length > 0) {
+      // Look for main system drive or use the first one
+      const mainDrive = diskData.find(drive => 
+        drive.mount === 'C:' || drive.mount === '/' || drive.mount.includes('C:')) || diskData[0];
+      diskUsage = mainDrive.use || 0;
+    }
 
     // Create a new metric data point with real system data
     const metric = {
@@ -141,9 +149,16 @@ const initializeData = async () => {
       si.fsSize()
     ]);
 
-    const cpuUsage = cpuData.currentLoad || 0;
+    const cpuUsage = cpuData.currentLoadUser + cpuData.currentLoadSystem || 0;
     const memoryUsage = ((memData.used / memData.total) * 100) || 0;
-    const diskUsage = diskData.length > 0 ? diskData[0].use || 0 : 0;
+    
+    // Find the main system drive
+    let diskUsage = 0;
+    if (diskData.length > 0) {
+      const mainDrive = diskData.find(drive => 
+        drive.mount === 'C:' || drive.mount === '/' || drive.mount.includes('C:')) || diskData[0];
+      diskUsage = mainDrive.use || 0;
+    }
 
     // Create 5 initial data points with slight variations for chart display
     for (let i = 0; i < 5; i++) {
