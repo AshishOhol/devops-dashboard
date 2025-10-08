@@ -71,69 +71,70 @@ let currentAlerts = [];
 // Updated every 10 seconds with real system information
 let serviceStatus = [];
 
-// Cache for disk data to avoid repeated filesystem calls
+// Enhanced caching system
 let cachedDiskData = null;
 let lastDiskCheck = 0;
+let cachedSystemInfo = null;
+let lastSystemInfoCheck = 0;
 
 // OPTIMIZED METRICS COLLECTION FUNCTION
-// This function collects real system performance metrics every second
 const collectMetrics = async () => {
   try {
-    // Get CPU and memory data (fast operations)
-    const [cpuData, memData] = await Promise.all([
-      si.currentLoad(),
-      si.mem()
+    const now = Date.now();
+    
+    // Get CPU and memory data with timeout
+    const [cpuData, memData] = await Promise.race([
+      Promise.all([si.currentLoad(), si.mem()]),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
     ]);
 
-    // Get disk data only every 10 seconds (slow operation)
-    let diskData = cachedDiskData;
-    const now = Date.now();
-    if (!cachedDiskData || (now - lastDiskCheck) > 10000) {
-      diskData = await si.fsSize();
-      cachedDiskData = diskData;
-      lastDiskCheck = now;
+    // Get disk data only every 30 seconds (very slow operation)
+    let diskUsage = cachedDiskData?.use || 0;
+    if (!cachedDiskData || (now - lastDiskCheck) > 30000) {
+      try {
+        const diskData = await Promise.race([
+          si.fsSize(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 5000))
+        ]);
+        if (diskData && diskData.length > 0) {
+          const mainDrive = diskData.find(drive => 
+            drive.mount === 'C:' || drive.mount === '/' || drive.mount.includes('C:')
+          ) || diskData[0];
+          cachedDiskData = { use: mainDrive.use || 0 };
+          lastDiskCheck = now;
+          diskUsage = cachedDiskData.use;
+        }
+      } catch (diskError) {
+        console.warn('Disk check failed, using cached value');
+      }
     }
 
-    // Calculate usage percentages with better accuracy
+    // Calculate usage percentages
     const cpuUsage = Math.min(100, Math.max(0, 
       (cpuData.currentLoadUser || 0) + (cpuData.currentLoadSystem || 0)
     ));
     const memoryUsage = Math.min(100, Math.max(0, 
       ((memData.used / memData.total) * 100) || 0
     ));
-    
-    // Find main system drive
-    let diskUsage = 0;
-    if (diskData && diskData.length > 0) {
-      const mainDrive = diskData.find(drive => 
-        drive.mount === 'C:' || drive.mount === '/' || drive.mount.includes('C:')
-      ) || diskData[0];
-      diskUsage = Math.min(100, Math.max(0, mainDrive.use || 0));
-    }
 
-    // Create metric with precise values
     const metric = {
       time: new Date().toLocaleTimeString(),
-      cpu: Math.round(cpuUsage * 10) / 10,     // Round to 1 decimal
+      cpu: Math.round(cpuUsage * 10) / 10,
       memory: Math.round(memoryUsage * 10) / 10,
       disk: Math.round(diskUsage * 10) / 10,
       timestamp: now
     };
 
-    // Add to history with size limit
+    // Maintain fixed size history
     metricsHistory.push(metric);
-    if (metricsHistory.length > 30) {
+    if (metricsHistory.length > 20) {
       metricsHistory.shift();
     }
 
-    // Check alerts only if values changed significantly
-    if (metricsHistory.length === 1 || 
-        Math.abs(metric.cpu - metricsHistory[metricsHistory.length - 2].cpu) > 1) {
-      checkAlerts(metric);
-    }
+    checkAlerts(metric);
     
   } catch (error) {
-    console.error('Metrics error:', error.message);
+    console.error('Metrics collection failed:', error.message);
   }
 };
 
@@ -250,9 +251,26 @@ const checkServices = async () => {
   }
 };
 
-// Collect data every 500ms for ultra-fast updates
-setInterval(collectMetrics, 500);
-setInterval(checkServices, 5000);
+// Collect data every 3 seconds for better performance
+let metricsInterval = setInterval(() => {
+  collectMetrics().catch(err => {
+    console.error('Metrics collection failed:', err.message);
+  });
+}, 3000);
+
+let servicesInterval = setInterval(() => {
+  checkServices().catch(err => {
+    console.error('Service check failed:', err.message);
+  });
+}, 10000);
+
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  clearInterval(metricsInterval);
+  clearInterval(servicesInterval);
+  process.exit(0);
+});
 
 // Generate reports every 10 minutes
 setInterval(() => {
@@ -282,17 +300,24 @@ app.get('/api/services', (req, res) => {
 
 app.get('/api/system-info', async (req, res) => {
   try {
-    const [cpu, mem, os] = await Promise.all([
-      si.cpu(),
-      si.mem(),
-      si.osInfo()
-    ]);
+    const now = Date.now();
     
-    res.json({
-      cpu: cpu.manufacturer + ' ' + cpu.brand,
-      memory: Math.round(mem.total / 1024 / 1024 / 1024) + ' GB',
-      os: os.platform + ' ' + os.release
-    });
+    // Cache system info for 60 seconds
+    if (!cachedSystemInfo || (now - lastSystemInfoCheck) > 60000) {
+      const [cpu, mem, os] = await Promise.race([
+        Promise.all([si.cpu(), si.mem(), si.osInfo()]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]);
+      
+      cachedSystemInfo = {
+        cpu: cpu.manufacturer + ' ' + cpu.brand,
+        memory: Math.round(mem.total / 1024 / 1024 / 1024) + ' GB',
+        os: os.platform + ' ' + os.release
+      };
+      lastSystemInfoCheck = now;
+    }
+    
+    res.json(cachedSystemInfo);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get system info' });
   }

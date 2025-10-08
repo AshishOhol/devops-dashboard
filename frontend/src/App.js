@@ -74,68 +74,90 @@ const App = () => {
 
   // EFFECT HOOK - Handles data fetching and real-time updates
   useEffect(() => {
+    let isMounted = true;
+    let retryCount = 0;
+    let systemInfoLastFetch = 0;
+    
     // Async function to fetch all data from backend API endpoints
     const fetchData = async () => {
+      if (!isMounted) return;
+      
       try {
-        // Log start of data fetching for debugging
-        console.log('Fetching data from backend...');
+        const timeout = 8000; // Increased timeout
         
-        // Make concurrent API calls to all backend endpoints
-        // These calls happen simultaneously for better performance
-        const metricsRes = await axios.get('/api/metrics');     // Get system metrics history
-        const alertsRes = await axios.get('/api/alerts');       // Get current active alerts
-        const servicesRes = await axios.get('/api/services');   // Get service health status
+        // Fetch core data with individual error handling
+        const promises = [
+          axios.get('/api/metrics', { timeout }).catch(e => ({ data: [] })),
+          axios.get('/api/alerts', { timeout }).catch(e => ({ data: [] })),
+          axios.get('/api/services', { timeout }).catch(e => ({ data: [] }))
+        ];
         
-        // Log successful data retrieval for debugging
-        console.log('Data received:', metricsRes.data.length, 'metrics');
+        const [metricsRes, alertsRes, servicesRes] = await Promise.all(promises);
+        
+        if (!isMounted) return;
         
         // UPDATE STATE with received data
-        setMetrics(metricsRes.data);        // Update metrics array with new data
-        setAlerts(alertsRes.data);          // Update alerts array
-        setServices(servicesRes.data);      // Update services array
+        setMetrics(metricsRes.data || []);
+        setAlerts(alertsRes.data || []);
+        setServices(servicesRes.data || []);
         
-        // Set system information (could be dynamic from API in future)
-        // Get real system info from backend API
-        try {
-          const systemRes = await axios.get('/api/system-info');
-          setSystemInfo(systemRes.data);
-        } catch (sysError) {
-          console.warn('Could not fetch system info, using defaults');
-          setSystemInfo({cpu: 'System CPU', memory: 'Unknown', os: 'Unknown'});
+        // Get system info only every 60 seconds
+        const now = Date.now();
+        if (!systemInfo.cpu || (now - systemInfoLastFetch) > 60000) {
+          try {
+            const systemRes = await axios.get('/api/system-info', { timeout: 10000 });
+            if (isMounted) {
+              setSystemInfo(systemRes.data);
+              systemInfoLastFetch = now;
+            }
+          } catch (sysError) {
+            console.warn('System info unavailable');
+            if (isMounted && !systemInfo.cpu) {
+              setSystemInfo({cpu: 'System CPU', memory: 'Unknown', os: 'Unknown'});
+            }
+          }
         }
         
-        // Record successful update timestamp
-        setLastUpdate(new Date());
-        
-        // Mark connection as live (affects UI indicators)
-        setIsLive(true);
-        
-        // Data loaded successfully, hide loading indicator
-        setLoading(false);
+        // Record successful update
+        if (isMounted) {
+          setLastUpdate(new Date());
+          setIsLive(true);
+          setLoading(false);
+          retryCount = 0;
+        }
         
       } catch (error) {
-        // Handle any errors during API calls
+        if (!isMounted) return;
+        
         console.error('Connection failed:', error.message);
+        retryCount++;
         
-        // Mark connection as failed (affects UI colors)
         setIsLive(false);
-        
-        // Stop loading even on error
         setLoading(false);
       }
     };
 
     // INITIALIZATION AND REAL-TIME UPDATES
-    fetchData();  // Fetch data immediately when component mounts
+    fetchData();
     
-    // Set up interval to fetch data every 5 seconds (5000ms) for real-time updates
-    const interval = setInterval(fetchData, 500);
+    // Use 5 second interval for better stability
+    const interval = setInterval(() => {
+      if (retryCount < 5) {
+        fetchData();
+      } else {
+        // Exponential backoff after failures
+        const backoffDelay = Math.min(30000, 1000 * Math.pow(2, retryCount - 5));
+        if (Date.now() % backoffDelay < 5000) fetchData();
+      }
+    }, 5000);
     
-    // CLEANUP FUNCTION - Prevents memory leaks
-    // This runs when component unmounts or dependencies change
-    return () => clearInterval(interval);
+    // CLEANUP FUNCTION
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
     
-  }, []); // Empty dependency array means this effect runs only once on mount
+  }, []);
 
   if (loading) {
     return <div style={{padding: '20px'}}>Loading dashboard...</div>;
@@ -167,7 +189,7 @@ const App = () => {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div>
-          <h2>📊 Live System Metrics ({metrics.length} data points - 0.5s updates)</h2>
+          <h2>📊 Live System Metrics ({metrics.length} data points - 5s updates)</h2>
           <div style={{marginBottom: '10px', fontSize: '14px'}}>
             <span style={{color: '#ff4444'}}>🔴 Red = CPU Usage</span> | 
             <span style={{color: '#44ff44'}}>🟢 Green = Memory Usage</span> | 

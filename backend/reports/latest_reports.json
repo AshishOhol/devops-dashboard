@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1759916958320,
+    "timestamp": "2025-10-08T09:49:18.316Z",
+    "reportTime": "8/10/2025, 3:19:18 pm",
+    "duration": "10 minutes",
+    "metrics": {
+      "cpu": {
+        "avg": 21.6,
+        "max": 54.2,
+        "min": 8.4,
+        "current": 28.1
+      },
+      "memory": {
+        "avg": 63.9,
+        "max": 66.8,
+        "min": 61.9,
+        "current": 64.5
+      },
+      "disk": {
+        "avg": 43.3,
+        "max": 43.3,
+        "min": 43.3,
+        "current": 43.3
+      },
+      "dataPoints": 20
+    },
+    "alerts": 0,
+    "alertDetails": [],
+    "summary": [
+      "🟢 NORMAL CPU: Average 21.6%",
+      "🟢 NORMAL MEMORY: Average 63.9%",
+      "🟢 NORMAL DISK: 43.3% used",
+      "✅ NO ALERTS"
+    ]
+  },
+  {
+    "id": 1759917051047,
+    "timestamp": "2025-10-08T09:50:51.047Z",
+    "reportTime": "8/10/2025, 3:20:51 pm",
+    "duration": "10 minutes",
+    "metrics": {
+      "cpu": {
+        "avg": 23.1,
+        "max": 41.2,
+        "min": 11.6,
+        "current": 16.7
+      },
+      "memory": {
+        "avg": 63.7,
+        "max": 65.1,
+        "min": 62.7,
+        "current": 62.9
+      },
+      "disk": {
+        "avg": 43.3,
+        "max": 43.3,
+        "min": 43.3,
+        "current": 43.3
+      },
+      "dataPoints": 20
+    },
+    "alerts": 0,
+    "alertDetails": [],
+    "summary": [
+      "🟢 NORMAL CPU: Average 23.1%",
+      "🟢 NORMAL MEMORY: Average 63.7%",
+      "🟢 NORMAL DISK: 43.3% used",
+      "✅ NO ALERTS"
+    ]
+  }
+]

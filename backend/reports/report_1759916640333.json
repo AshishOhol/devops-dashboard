@@ -1,0 +1,35 @@
+{
+  "id": 1759916640333,
+  "timestamp": "2025-10-08T09:44:00.333Z",
+  "reportTime": "8/10/2025, 3:14:00 pm",
+  "duration": "10 minutes",
+  "metrics": {
+    "cpu": {
+      "avg": 18.1,
+      "max": 27.8,
+      "min": 11.6,
+      "current": 15.9
+    },
+    "memory": {
+      "avg": 64.7,
+      "max": 64.9,
+      "min": 64.6,
+      "current": 64.7
+    },
+    "disk": {
+      "avg": 43.3,
+      "max": 43.3,
+      "min": 43.3,
+      "current": 43.3
+    },
+    "dataPoints": 30
+  },
+  "alerts": 0,
+  "alertDetails": [],
+  "summary": [
+    "🟢 NORMAL CPU: Average 18.1%",
+    "🟢 NORMAL MEMORY: Average 64.7%",
+    "🟢 NORMAL DISK: 43.3% used",
+    "✅ NO ALERTS"
+  ]
+}

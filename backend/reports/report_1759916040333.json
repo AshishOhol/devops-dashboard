@@ -1,0 +1,43 @@
+{
+  "id": 1759916040333,
+  "timestamp": "2025-10-08T09:34:00.333Z",
+  "reportTime": "8/10/2025, 3:04:00 pm",
+  "duration": "10 minutes",
+  "metrics": {
+    "cpu": {
+      "avg": 97.2,
+      "max": 98.2,
+      "min": 96.2,
+      "current": 97
+    },
+    "memory": {
+      "avg": 71.9,
+      "max": 76.3,
+      "min": 67.1,
+      "current": 73.4
+    },
+    "disk": {
+      "avg": 43.3,
+      "max": 43.3,
+      "min": 43.3,
+      "current": 43.3
+    },
+    "dataPoints": 30
+  },
+  "alerts": 1,
+  "alertDetails": [
+    {
+      "id": 1,
+      "name": "High CPU Usage",
+      "description": "CPU usage at 97.6%",
+      "severity": "critical",
+      "timestamp": "2025-10-08T09:33:54.401Z"
+    }
+  ],
+  "summary": [
+    "🔴 HIGH CPU: Average 97.2% (Peak: 98.2%)",
+    "🟡 MODERATE MEMORY: Average 71.9%",
+    "🟢 NORMAL DISK: 43.3% used",
+    "⚠️ 1 ACTIVE ALERTS"
+  ]
+}
